@@ -1,0 +1,2320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <!-- 🔧 修复：适配移动端，移除错误的 initial-scale=1024 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>PathAI · AI 学习路径助手</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!--
+  ============================================================
+  🎯 面试展示说明
+  ============================================================
+  本页面是一次产品 Demo，核心展示以下能力：
+  1. 用户洞察：理解转行者"不是缺课程，是缺路径"的真痛点
+  2. 差异化策略：「可迁移能力平移」取代「推荐一堆课」
+  3. AI 产品设计：AI 分析→ 压缩路径 → 动态生成节点
+  4. 数据意识：岗位准备度指标量化学习成果
+  5. 交互细节：响应式、无障碍、加载态、微交互动效
+
+  面试官可在浏览时注意：
+  - 移动端适配（375px+ 均可使用）
+  - 行业选择时右侧「AI 分析面板」的实时反馈
+  - 路径页「为什么你必须学这个」的产品推理
+  - 反馈页「岗位准备度」变化的数据可视化
+  ============================================================
+  -->
+
+  <style>
+    /* ========================================
+       CSS 变量 & 设计系统
+       ======================================== */
+    :root {
+      --primary: #378ADD;
+      --primary-600: #2d73b8;
+      --primary-50: #EFF6FF;
+      --primary-100: #DBEAFE;
+      --bg: #ffffff;
+      --bg-50: #F8F9FA;
+      --bg-100: #F3F4F6;
+      --border: #E5E7EB;
+      --border-light: #F3F4F6;
+      --text: #111827;
+      --text-600: #6B7280;
+      --text-400: #9CA3AF;
+      --green: #16A34A;
+      --green-50: #F0FDF4;
+      --green-100: #DCFCE7;
+      --orange: #D97706;
+      --orange-50: #FFFBEB;
+      --gold: #CA8A04;
+      --gold-50: #FEFCE8;
+      --red: #DC2626;
+      --red-50: #FEF2F2;
+      --purple: #7C3AED;
+      --purple-50: #F5F3FF;
+
+      --radius-sm: 6px;
+      --radius: 10px;
+      --radius-lg: 16px;
+      --radius-full: 999px;
+      --font: "Inter", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.05);
+      --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+      --shadow-md: 0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.06);
+      --shadow-lg: 0 10px 25px rgba(0,0,0,.08), 0 4px 10px rgba(0,0,0,.05);
+      --transition: .2s cubic-bezier(.4,0,.2,1);
+      --transition-slow: .35s cubic-bezier(.4,0,.2,1);
+
+      /* 响应式边距 */
+      --content-pad: clamp(16px, 4vw, 48px);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      scroll-behavior: smooth;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      /* 🔧 修复：移除 min-width，改用响应式 */
+    }
+
+    /* ========================================
+       页面容器
+       ======================================== */
+    .page {
+      display: none;
+      min-height: 100vh;
+      opacity: 0;
+      transition: opacity var(--transition-slow);
+    }
+    .page.active {
+      display: block;
+      opacity: 1;
+    }
+
+    /* 🔧 新增：页面切换动画 */
+    .page.fade-in { animation: pageIn .35s ease forwards; }
+    @keyframes pageIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-4px); }
+      40%, 80% { transform: translateX(4px); }
+    }
+    .shake { animation: shake .35s ease; }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding-left: var(--content-pad);
+      padding-right: var(--content-pad);
+    }
+
+    /* ========================================
+       通用组件
+       ======================================== */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      font-family: inherit; font-weight: 600; border-radius: var(--radius);
+      cursor: pointer; border: none; transition: all var(--transition);
+      white-space: nowrap; user-select: none; text-decoration: none;
+      font-size: 14px; padding: 10px 18px;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn:active { transform: scale(.97); }
+    .btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-600); box-shadow: var(--shadow-md); }
+
+    .btn-lg { padding: 14px 28px; font-size: 16px; border-radius: var(--radius); }
+    .btn-xl { padding: 16px 32px; font-size: 17px; border-radius: var(--radius); }
+
+    .btn-block { width: 100%; padding: 14px; margin-top: 16px; }
+
+    .btn-ghost {
+      background: transparent; color: var(--text-600); padding: 12px; font-weight: 500;
+    }
+    .btn-ghost:hover { color: var(--text); background: var(--bg-50); }
+
+    .btn-outline {
+      background: #fff; border: 1px solid var(--border); color: var(--text);
+      padding: 10px 18px; font-weight: 500;
+    }
+    .btn-outline:hover { border-color: var(--text-400); }
+
+    .btn-outline-primary {
+      background: #fff; border: 1px solid var(--primary); color: var(--primary);
+      padding: 10px 18px; font-weight: 600;
+    }
+    .btn-outline-primary:hover { background: var(--primary-50); }
+
+    .btn-sm { padding: 6px 14px; font-size: 13px; }
+
+    /* 标签 */
+    .tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 12px; font-weight: 600;
+      padding: 3px 10px; border-radius: var(--radius-full);
+    }
+    .tag-green { background: var(--green-50); color: var(--green); }
+    .tag-orange { background: var(--orange-50); color: var(--orange); }
+    .tag-gold { background: var(--gold-50); color: var(--gold); }
+    .tag-purple { background: var(--purple-50); color: var(--purple); }
+    .tag-default { background: var(--bg-100); color: var(--text-600); }
+
+    /* 进度条 */
+    .progress-track {
+      height: 6px; background: var(--border-light); border-radius: var(--radius-full);
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; background: var(--primary);
+      border-radius: var(--radius-full);
+      transition: width .5s cubic-bezier(.4,0,.2,1);
+    }
+    .progress-fill.green { background: var(--green); }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+      background: #1F2937; color: #fff; padding: 14px 24px; border-radius: var(--radius-full);
+      font-size: 14px; font-weight: 500; opacity: 0;
+      transition: all .3s cubic-bezier(.4,0,.2,1);
+      z-index: 1000; pointer-events: none;
+      box-shadow: var(--shadow-lg); white-space: nowrap;
+    }
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* ========================================
+       导航
+       ======================================== */
+    .nav {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      padding: 16px var(--content-pad);
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .nav-left { display: flex; align-items: center; gap: 16px; }
+    .nav-center {
+      flex: 1; text-align: center; font-size: 14px;
+      color: var(--text-600);
+      /* 🔧 移动端隐藏 */
+    }
+    .nav-right {
+      display: flex; align-items: center; gap: 16px;
+    }
+
+    .logo {
+      font-size: 22px; font-weight: 800; cursor: pointer;
+      letter-spacing: -.02em; color: var(--text);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .logo-icon {
+      width: 32px; height: 32px; background: var(--primary);
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 18px; font-weight: 700;
+    }
+
+    .nav-links {
+      display: flex; align-items: center; gap: 28px; list-style: none;
+    }
+    .nav-links a {
+      font-size: 14px; color: var(--text-600); text-decoration: none;
+      transition: color var(--transition);
+    }
+    .nav-links a:hover { color: var(--text); }
+
+    .readiness-bar-wrap {
+      display: flex; align-items: center; gap: 10px; font-size: 13px;
+      white-space: nowrap; color: var(--text-600);
+    }
+    .readiness-bar-wrap strong { color: var(--primary); font-size: 14px; }
+    .readiness-bar-wrap .progress-track { width: 80px; }
+
+    /* 🔧 移动端汉堡菜单 */
+    .mobile-menu-btn {
+      display: none; width: 40px; height: 40px; align-items: center;
+      justify-content: center; background: none; border: none;
+      cursor: pointer; font-size: 22px; color: var(--text);
+      border-radius: var(--radius);
+    }
+    .mobile-menu-btn:hover { background: var(--bg-50); }
+
+    /* ========================================
+       页面1：落地页 (Landing)
+       ======================================== */
+    .hero {
+      display: grid; grid-template-columns: 1fr 1fr; gap: clamp(24px, 5vw, 56px);
+      align-items: center;
+      padding: clamp(32px, 6vw, 72px) var(--content-pad) clamp(40px, 8vw, 88px);
+      max-width: 1200px; margin: 0 auto;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--primary-50); color: var(--primary);
+      font-size: 13px; font-weight: 600; padding: 6px 14px;
+      border-radius: var(--radius-full); margin-bottom: 16px;
+    }
+    .hero-badge::before {
+      content: "●"; font-size: 8px; color: var(--green);
+    }
+    .hero h1 {
+      font-size: clamp(28px, 4.5vw, 44px);
+      font-weight: 800; line-height: 1.15;
+      margin-bottom: 16px; letter-spacing: -.03em;
+    }
+    .hero h1 em {
+      font-style: normal;
+      background: linear-gradient(135deg, var(--primary), #6366F1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-desc {
+      color: var(--text-600); font-size: clamp(15px, 1.6vw, 18px);
+      margin-bottom: 24px; max-width: 460px; line-height: 1.7;
+    }
+    .hero-cta {
+      display: flex; align-items: center; gap: 14px; margin-bottom: 36px;
+      flex-wrap: wrap;
+    }
+    .hero-meta {
+      font-size: 13px; color: var(--text-400);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .hero-meta::before { content: "⏱"; }
+
+    .stats {
+      display: flex; gap: clamp(16px, 3vw, 44px); flex-wrap: wrap;
+    }
+    .stat-item strong {
+      display: block; font-size: clamp(18px, 2vw, 26px);
+      font-weight: 700; color: var(--text);
+    }
+    .stat-item span {
+      font-size: 13px; color: var(--text-600);
+    }
+    .stat-item .stat-icon { font-size: 16px; margin-right: 2px; }
+
+    /* 预览卡片 */
+    .preview-wrap {
+      background: var(--bg-50);
+      border-radius: var(--radius-lg);
+      padding: clamp(16px, 2vw, 28px);
+      border: 1px solid var(--border);
+    }
+    .preview-card {
+      background: #fff; border-radius: var(--radius);
+      padding: 20px 24px; border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+    }
+    .preview-head {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 16px; font-weight: 600; font-size: 14px;
+    }
+    .preview-progress {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; color: var(--primary); font-weight: 600;
+    }
+    .preview-progress .progress-track { width: 64px; }
+
+    .preview-nodes { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .preview-node {
+      display: flex; flex-wrap: wrap; align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px; border: 1px solid var(--border);
+      border-radius: var(--radius); font-size: 14px;
+      transition: all var(--transition);
+    }
+    .preview-node.active {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(55,138,221,.12);
+    }
+    .preview-tip {
+      width: 100%; margin-top: 10px; font-size: 12px;
+      color: var(--primary); background: var(--primary-50);
+      padding: 10px 12px; border-radius: var(--radius-sm);
+      line-height: 1.6;
+    }
+
+    /* 🔧 落地页特色亮点带 */
+    .feature-strip {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+      background: var(--border); margin-top: 1px;
+    }
+    .feature-item {
+      background: #fff; padding: 32px 24px; text-align: center;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+    }
+    .feature-icon {
+      width: 48px; height: 48px; border-radius: var(--radius);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; margin-bottom: 4px;
+    }
+    .feature-icon.blue { background: var(--primary-50); }
+    .feature-icon.green { background: var(--green-50); }
+    .feature-icon.purple { background: var(--purple-50); }
+    .feature-item h3 { font-size: 15px; font-weight: 700; }
+    .feature-item p { font-size: 13px; color: var(--text-600); line-height: 1.6; }
+
+    /* 🔧 落地页 · 方法论亮点 */
+    .section-methodology {
+      padding: clamp(32px, 4vw, 56px) var(--content-pad);
+      max-width: 1200px; margin: 0 auto;
+    }
+    .section-methodology h2 {
+      font-size: clamp(18px, 2vw, 24px); font-weight: 700;
+      margin-bottom: 28px; text-align: center;
+    }
+    .method-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    .method-card {
+      border: 1px solid var(--border); border-radius: var(--radius-lg);
+      padding: 24px; transition: all var(--transition);
+    }
+    .method-card:hover {
+      border-color: var(--primary); box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+    .method-step {
+      width: 32px; height: 32px; background: var(--primary-50);
+      color: var(--primary); border-radius: var(--radius-full);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 14px; margin-bottom: 14px;
+    }
+    .method-card h4 { font-size: 16px; margin-bottom: 6px; }
+    .method-card p {
+      font-size: 13px; color: var(--text-600); line-height: 1.65;
+    }
+    .method-card .ai-note {
+      margin-top: 12px; font-size: 12px; color: var(--purple);
+      background: var(--purple-50); padding: 8px 12px;
+      border-radius: var(--radius-sm);
+    }
+
+    /* 成功案例 */
+    .section-cases {
+      background: var(--bg-50); padding: clamp(32px, 4vw, 56px) var(--content-pad);
+    }
+    .section-cases-inner { max-width: 1200px; margin: 0 auto; }
+    .section-cases h2 {
+      font-size: clamp(18px, 2vw, 22px); font-weight: 700; margin-bottom: 24px;
+    }
+    .landing-case-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+    }
+    .landing-case-card {
+      display: flex; gap: 16px; align-items: flex-start;
+      background: #fff; border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px 24px;
+      transition: all var(--transition);
+    }
+    .landing-case-card:hover { box-shadow: var(--shadow); }
+    .landing-case-card .avatar {
+      width: 44px; height: 44px; font-size: 16px;
+      border-radius: 50%; background: var(--primary-50);
+      color: var(--primary); display: flex; align-items: center;
+      justify-content: center; font-weight: 700; flex-shrink: 0;
+    }
+    .landing-case-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    .landing-case-card p {
+      font-size: 13px; color: var(--text-600); line-height: 1.6;
+    }
+    .landing-case-card .highlight {
+      display: inline-block; margin-top: 6px; font-size: 12px;
+      color: var(--green); background: var(--green-50);
+      padding: 2px 8px; border-radius: var(--radius-full);
+    }
+
+    /* FAQ */
+    .section-faq {
+      padding: clamp(32px, 4vw, 56px) var(--content-pad) clamp(48px, 6vw, 80px);
+    }
+    .section-faq-inner { max-width: 1200px; margin: 0 auto; }
+    .section-faq h2 {
+      font-size: clamp(18px, 2vw, 22px); font-weight: 700; margin-bottom: 24px;
+    }
+    .faq-list { max-width: 1200px; }
+    .faq-item {
+      border-bottom: 1px solid var(--border); padding: 20px 0;
+      transition: all var(--transition);
+    }
+    .faq-item:first-child { padding-top: 0; }
+    .faq-item summary {
+      font-size: 15px; font-weight: 600; cursor: pointer; list-style: none;
+      display: flex; align-items: center; gap: 10px; user-select: none;
+      transition: color var(--transition);
+    }
+    .faq-item summary:hover { color: var(--primary); }
+    .faq-item summary::-webkit-details-marker { display: none; }
+    .faq-item summary::before {
+      content: "▶"; font-size: 10px; color: var(--text-400); flex-shrink: 0;
+      transition: transform var(--transition);
+    }
+    .faq-item[open] summary { color: var(--primary); }
+    .faq-item[open] summary::before {
+      content: "▼"; color: var(--primary);
+    }
+    .faq-item p {
+      margin-top: 12px; padding-left: 22px;
+      font-size: 14px; color: var(--text-600); line-height: 1.75;
+    }
+
+    /* ========================================
+       页面2：Onboarding
+       ======================================== */
+    .stepper {
+      display: flex; justify-content: center; gap: clamp(16px, 3vw, 40px);
+      list-style: none; padding: 16px var(--content-pad);
+      border-bottom: 1px solid var(--border); overflow-x: auto;
+    }
+    .step {
+      display: flex; align-items: center; gap: 8px; font-size: 13px;
+      color: var(--text-400); transition: all var(--transition);
+      white-space: nowrap;
+    }
+    .step.active { color: var(--primary); font-weight: 600; }
+    .step.done { color: var(--green); }
+    .step-dot {
+      width: 26px; height: 26px; border-radius: 50%;
+      border: 2px solid currentColor;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; flex-shrink: 0;
+      transition: all var(--transition);
+    }
+    .step.active .step-dot { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .step.done .step-dot { background: var(--green); color: #fff; border-color: var(--green); }
+
+    .onboard-step { display: none; padding: clamp(24px, 4vw, 48px) var(--content-pad) clamp(40px, 6vw, 72px); max-width: 1200px; margin: 0 auto; }
+    .onboard-step.active { display: block; }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr clamp(280px, 32%, 400px);
+      gap: clamp(24px, 3vw, 44px);
+      align-items: start;
+    }
+    .onboard-step h2 {
+      font-size: clamp(22px, 3vw, 30px); font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .subtitle { color: var(--text-600); margin-bottom: 24px; font-size: 15px; }
+    .field-label {
+      display: block; font-size: 14px; font-weight: 600; margin-bottom: 12px;
+    }
+
+    /* 行业标签 */
+    .tag-grid {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px;
+    }
+    .tag-btn {
+      padding: 8px 18px; border: 1.5px solid var(--border);
+      border-radius: var(--radius-full); background: #fff;
+      font-size: 14px; cursor: pointer; transition: all var(--transition);
+      font-family: inherit;
+    }
+    .tag-btn:hover { border-color: var(--primary); background: var(--primary-50); }
+    .tag-btn.selected {
+      border-color: var(--primary); background: var(--primary-50);
+      color: var(--primary); font-weight: 600;
+    }
+
+    textarea {
+      width: 100%; padding: 14px 18px; border: 1.5px solid var(--border);
+      border-radius: var(--radius); background: var(--bg-50);
+      font-family: inherit; font-size: 14px; resize: vertical;
+      min-height: 100px; transition: all var(--transition);
+      line-height: 1.7;
+    }
+    textarea:focus {
+      outline: none; border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(55,138,221,.12);
+    }
+
+    /* AI 分析面板 */
+    .ai-panel {
+      background: var(--bg-50); border-radius: var(--radius-lg);
+      padding: 20px 24px; border: 1px solid var(--border);
+    }
+    .ai-panel-title {
+      font-weight: 600; margin-bottom: 16px;
+      display: flex; align-items: center; gap: 6px; font-size: 14px;
+    }
+    .ai-panel-title .spark { color: var(--primary); font-size: 18px; }
+    .ai-panel-title .dot {
+      width: 6px; height: 6px; background: var(--green);
+      border-radius: 50%; animation: pulse-dot 1.5s ease infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .4; transform: scale(1.6); }
+    }
+
+    .transfer-card {
+      background: var(--primary-50); border-left: 3px solid var(--primary);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: 16px 18px; margin-bottom: 12px;
+      transition: all var(--transition);
+    }
+    .transfer-card.anim-in {
+      animation: slideIn .4s ease forwards;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-8px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    .transfer-card h4 { font-size: 14px; margin-bottom: 10px; }
+    .transfer-card ul { list-style: none; font-size: 13px; color: var(--text-600); }
+    .transfer-card li {
+      padding: 5px 0; display: flex; align-items: flex-start; gap: 6px;
+    }
+    .transfer-card li::before { content: "→"; color: var(--primary); flex-shrink: 0; }
+
+    .ai-summary {
+      font-size: 13px; color: var(--text-600); margin-bottom: 16px;
+      line-height: 1.7;
+    }
+
+    /* 角色卡片 */
+    .role-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px; }
+    .role-card {
+      display: flex; gap: 14px; padding: 16px 20px;
+      border: 1.5px solid var(--border); border-radius: var(--radius);
+      cursor: pointer; transition: all var(--transition); align-items: flex-start;
+    }
+    .role-card:hover { border-color: var(--primary-100); }
+    .role-card.selected {
+      border-color: var(--primary); background: var(--primary-50);
+      box-shadow: 0 0 0 3px rgba(55,138,221,.12);
+    }
+    .role-card input { margin-top: 2px; accent-color: var(--primary); cursor: pointer; }
+    .role-card strong { display: block; margin-bottom: 2px; font-size: 15px; }
+    .role-card .role-desc { font-size: 13px; color: var(--text-600); }
+    .role-card .role-match {
+      margin-top: 6px; font-size: 12px; color: var(--green);
+      display: none; align-items: center; gap: 4px;
+    }
+    .role-card.selected .role-match { display: flex; }
+
+    .preview-side {
+      background: var(--bg-50); border-radius: var(--radius-lg);
+      padding: 20px 24px; border: 1px solid var(--border);
+    }
+    .preview-side h4 { font-size: 15px; margin-bottom: 14px; }
+    .preview-side ul { list-style: none; font-size: 13px; color: var(--text-600); }
+    .preview-side li {
+      padding: 6px 0; display: flex; align-items: center; gap: 8px;
+    }
+    .preview-side li::before {
+      content: "✓"; color: var(--green); font-weight: 700; font-size: 12px;
+    }
+    .preview-side .hint {
+      margin-top: 14px; font-size: 13px; color: var(--orange);
+      font-weight: 500; background: var(--orange-50);
+      padding: 10px 14px; border-radius: var(--radius-sm);
+    }
+    .preview-side .case-ref {
+      margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);
+      font-size: 12px; color: var(--text-400);
+    }
+    .preview-side .case-ref strong { color: var(--text-600); }
+
+    /* 加载面板 */
+    .loading-panel {
+      text-align: center; padding: clamp(40px, 6vw, 88px) clamp(16px, 3vw, 48px);
+      max-width: 480px; margin: 0 auto;
+    }
+    .spinner {
+      width: 52px; height: 52px;
+      border: 3px solid var(--border-light);
+      border-top-color: var(--primary);
+      border-radius: 50%; margin: 0 auto 28px;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-panel h2 { margin-bottom: 8px; font-size: 20px; }
+    .loading-panel > p { color: var(--text-600); margin-bottom: 36px; }
+    .load-steps { list-style: none; text-align: left; }
+    .load-steps li {
+      padding: 10px 0 10px 28px; color: var(--text-400);
+      position: relative; transition: all .4s ease;
+      font-size: 14px;
+    }
+    .load-steps li.show { opacity: 1; color: var(--text-600); }
+    .load-steps li.done { color: var(--green); }
+    .load-steps li.done::before {
+      content: "✓"; position: absolute; left: 0; font-weight: 700; color: var(--green);
+    }
+    .load-steps li.active {
+      color: var(--primary); font-weight: 600;
+    }
+    .load-steps li.active::before {
+      content: "●"; position: absolute; left: 0; color: var(--primary);
+      animation: pulse-dot 1.5s ease infinite;
+    }
+
+    /* ========================================
+       页面3：Path
+       ======================================== */
+    .path-layout {
+      display: grid;
+      grid-template-columns: clamp(200px, 22%, 260px) 1fr;
+      min-height: calc(100vh - 65px);
+    }
+    .path-sidebar {
+      border-right: 1px solid var(--border); padding: 24px 16px;
+      background: var(--bg-50);
+    }
+    .path-sidebar h3 {
+      font-size: 13px; color: var(--text-600); margin-bottom: 16px;
+      font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+    }
+    .node-list { list-style: none; display: flex; flex-direction: column; gap: 3px; }
+    .node-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: var(--radius);
+      font-size: 14px; cursor: pointer;
+      border: 1.5px solid transparent;
+      transition: all var(--transition);
+      position: relative;
+    }
+    .node-item:hover { background: #fff; border-color: var(--border); }
+    .node-item.current {
+      background: #fff; border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(55,138,221,.1);
+      font-weight: 600;
+    }
+    .node-item.done { background: var(--green-50); }
+    .node-icon {
+      width: 26px; height: 26px; border-radius: 50%;
+      border: 1.5px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; flex-shrink: 0;
+      background: #fff; color: var(--text-400);
+      transition: all var(--transition);
+    }
+    .node-item.done .node-icon {
+      background: var(--green); color: #fff; border-color: var(--green);
+    }
+    .node-item.current .node-icon {
+      background: var(--primary); color: #fff; border-color: var(--primary);
+    }
+    .node-item .skip-label {
+      margin-left: auto; font-size: 11px;
+      background: var(--gold-50); color: var(--gold);
+      padding: 2px 8px; border-radius: var(--radius-full);
+      font-weight: 600;
+    }
+
+    .path-detail {
+      padding: clamp(20px, 3vw, 36px) clamp(20px, 3vw, 52px);
+      max-width: 780px; overflow-y: auto;
+    }
+    /* 🔧 节点切换动画 */
+    .path-detail .detail-content {
+      animation: fadeSlideIn .3s ease forwards;
+    }
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .detail-header { margin-bottom: 24px; }
+    .detail-header h1 {
+      font-size: clamp(20px, 2.5vw, 26px);
+      display: flex; align-items: center; gap: 10px;
+      flex-wrap: wrap; margin-bottom: 8px; font-weight: 700;
+    }
+    .detail-time {
+      font-size: 14px; color: var(--text-600);
+    }
+    .detail-time em { color: var(--green); font-style: normal; font-weight: 700; }
+    .detail-time .saved {
+      display: inline-flex; align-items: center; gap: 4px;
+      color: var(--purple); font-size: 12px; font-weight: 600;
+      margin-left: 6px;
+      background: var(--purple-50); padding: 2px 10px;
+      border-radius: var(--radius-full);
+    }
+
+    .why-card {
+      background: linear-gradient(135deg, var(--primary-50), #FFF);
+      border-left: 4px solid var(--primary);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: 20px 24px; margin-bottom: 24px;
+    }
+    .why-card h3 {
+      font-size: 15px; font-weight: 700; margin-bottom: 10px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .why-card h3 .spark { color: var(--primary); }
+    .why-card .why-body {
+      font-size: 14px; color: var(--text-600); line-height: 1.8;
+    }
+    .why-card .why-tagline {
+      display: inline-block; margin-top: 10px; font-size: 12px;
+      color: var(--purple); font-weight: 600;
+      background: var(--purple-50); padding: 4px 12px;
+      border-radius: var(--radius-full);
+    }
+
+    .detail-section { margin-bottom: 24px; }
+    .detail-section h3 {
+      font-size: 16px; font-weight: 600; margin-bottom: 12px;
+    }
+    .resource-item {
+      display: flex; flex-direction: column; gap: 4px;
+      padding: 14px 18px; border: 1px solid var(--border);
+      border-radius: var(--radius); margin-bottom: 10px;
+      transition: all var(--transition);
+    }
+    .resource-item:hover { border-color: var(--primary-100); box-shadow: var(--shadow-sm); }
+    .resource-item a {
+      color: var(--primary); font-weight: 600; font-size: 14px;
+      text-decoration: none;
+    }
+    .resource-item a:hover { text-decoration: underline; }
+    .resource-meta { font-size: 12px; color: var(--text-400); }
+
+    .completion-box {
+      background: var(--bg-50); border-radius: var(--radius);
+      padding: 18px 20px; font-size: 14px; color: var(--text-600);
+      line-height: 1.75; border: 1px solid var(--border);
+    }
+    .detail-actions {
+      display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px;
+    }
+    .detail-actions .btn-outline { width: auto; }
+
+    /* 🔧 完成横幅 */
+    .complete-banner {
+      display: none; margin: 0 var(--content-pad) 0;
+      padding: 14px 20px;
+      background: linear-gradient(135deg, var(--green-50), var(--primary-50));
+      border: 1px solid var(--green-100); border-radius: var(--radius);
+      align-items: center; justify-content: space-between;
+      gap: 16px; flex-wrap: wrap;
+    }
+    .complete-banner.show {
+      display: flex;
+      animation: bannerIn .5s ease forwards;
+    }
+    @keyframes bannerIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .complete-banner p { font-size: 14px; font-weight: 600; color: var(--green); }
+
+    /* ========================================
+       页面4：Complete
+       ======================================== */
+    .complete-wrap {
+      padding: clamp(24px, 4vw, 48px) var(--content-pad) clamp(40px, 6vw, 72px);
+      max-width: 1200px; margin: 0 auto;
+    }
+    .complete-top {
+      display: grid;
+      grid-template-columns: 1fr clamp(260px, 30%, 360px);
+      gap: clamp(20px, 3vw, 36px);
+      margin-bottom: clamp(28px, 3vw, 48px);
+      align-items: start;
+    }
+    .complete-icon {
+      width: 60px; height: 60px; border-radius: 50%;
+      background: var(--green-50); color: var(--green);
+      font-size: 28px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 16px;
+    }
+    .complete-top h1 {
+      font-size: clamp(24px, 3vw, 34px); font-weight: 800;
+      margin-bottom: 6px;
+    }
+    .complete-sub { color: var(--text-600); margin-bottom: 16px; }
+    .complete-desc {
+      color: var(--text-600); line-height: 1.75;
+      max-width: 520px; font-size: 15px;
+    }
+
+    .change-card {
+      background: var(--bg-50); border-radius: var(--radius-lg);
+      padding: 24px 28px; border: 1px solid var(--border);
+    }
+    .change-card h3 {
+      font-size: 13px; color: var(--text-600); margin-bottom: 16px;
+      text-transform: uppercase; letter-spacing: .04em;
+    }
+    .change-nums {
+      display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px;
+    }
+    .change-nums .from { font-size: 20px; color: var(--text-400); text-decoration: line-through; }
+    .change-nums .to { font-size: 40px; font-weight: 800; color: var(--primary); }
+    .badge-up {
+      background: var(--green-50); color: var(--green);
+      font-size: 14px; font-weight: 700; padding: 4px 12px;
+      border-radius: var(--radius-full);
+    }
+    .change-card .progress-track { width: 100%; margin-bottom: 16px; height: 8px; }
+    .change-card .note {
+      font-size: 13px; color: var(--text-600); line-height: 1.6;
+    }
+    .change-card .note strong { color: var(--primary); }
+
+    .suggest-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px; margin-bottom: 32px;
+    }
+    .suggest-card {
+      border: 1px solid var(--border); border-radius: var(--radius-lg);
+      padding: 24px; display: flex; flex-direction: column;
+      transition: all var(--transition);
+    }
+    .suggest-card:hover { box-shadow: var(--shadow-md); border-color: var(--primary-100); }
+    .suggest-icon {
+      width: 40px; height: 40px; border-radius: var(--radius);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; margin-bottom: 14px;
+    }
+    .suggest-icon.blue { background: var(--primary-50); }
+    .suggest-icon.green { background: var(--green-50); }
+    .suggest-icon.orange { background: var(--orange-50); }
+    .suggest-icon.purple { background: var(--purple-50); }
+    .suggest-card h3 { font-size: 16px; margin-bottom: 8px; font-weight: 700; }
+    .suggest-card p {
+      font-size: 13px; color: var(--text-600); flex: 1;
+      margin-bottom: 16px; line-height: 1.65;
+    }
+    .complete-btns {
+      display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
+    }
+    .section-title {
+      font-size: 20px; font-weight: 700; margin-bottom: 18px;
+    }
+
+    /* ========================================
+       🔧 响应式：移动端适配
+       ======================================== */
+
+    /* 平板 (≤1024px) */
+    @media (max-width: 1024px) {
+      .hero {
+        grid-template-columns: 1fr;
+        gap: 32px;
+      }
+      .hero-cta { margin-bottom: 28px; }
+      .stats { gap: 24px; }
+      .preview-wrap { order: -1; }
+
+      .two-col {
+        grid-template-columns: 1fr;
+      }
+      .path-layout {
+        grid-template-columns: 1fr;
+      }
+      .path-sidebar {
+        display: none; /* 🔧 路径页移动端改为顶部导航 */
+      }
+      .path-sidebar.mobile-open {
+        display: block; position: fixed; top: 60px; left: 0; right: 0;
+        bottom: 0; z-index: 90; overflow-y: auto;
+        border-right: none; border-bottom: 1px solid var(--border);
+      }
+      .complete-top {
+        grid-template-columns: 1fr;
+      }
+      .feature-strip {
+        grid-template-columns: 1fr;
+      }
+      .nav-center { display: none; }
+      .mobile-menu-btn { display: flex; }
+    }
+
+    /* 手机 (≤640px) */
+    @media (max-width: 640px) {
+      .hero h1 { font-size: 26px; }
+      .hero-desc { font-size: 14px; }
+      .hero-cta { flex-direction: column; align-items: flex-start; }
+      .stats { gap: 16px; }
+
+      .nav-links { display: none; }
+      .readiness-bar-wrap { font-size: 12px; }
+      .readiness-bar-wrap .progress-track { width: 50px; }
+
+      .stepper { gap: 12px; font-size: 12px; padding: 12px 8px; }
+      .step-dot { width: 22px; height: 22px; font-size: 10px; }
+
+      .path-detail { padding: 20px 16px; }
+      .detail-actions { flex-direction: column; }
+      .detail-actions .btn { width: 100%; }
+
+      .suggest-grid { grid-template-columns: 1fr; }
+      .landing-case-grid { grid-template-columns: 1fr; }
+      .method-grid { grid-template-columns: 1fr; }
+
+      .complete-banner { margin: 0 8px; padding: 12px 16px; }
+    }
+
+    /* 🔧 键盘导航可见 */
+    :focus-visible {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+    }
+
+    /* 🔧 减少动画偏好 */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important;
+        transition-duration: .01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ============================================================
+     页面1：落地页
+     ============================================================ -->
+<section id="page-landing" class="page active fade-in" aria-label="首页">
+  <!-- 导航 -->
+  <header class="nav" role="banner">
+    <div class="nav-left">
+      <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="菜单" title="菜单">☰</button>
+      <span class="logo" data-page="landing" tabindex="0" role="link" aria-label="PathAI 首页" title="回到首页">
+        <span class="logo-icon">P</span>PathAI
+      </span>
+    </div>
+    <nav class="nav-links" id="nav-links" role="navigation" aria-label="主导航">
+      <a href="#intro">产品介绍</a>
+      <a href="#method">产品方法论</a>
+      <a href="#cases">成功案例</a>
+      <a href="#faq">常见问题</a>
+    </nav>
+    <div class="nav-right">
+      <button type="button" class="btn btn-primary" data-page="onboarding" id="hero-cta-btn">免费开始</button>
+    </div>
+  </header>
+
+  <!-- 主视觉区 -->
+  <div class="hero" id="intro">
+    <div class="hero-left">
+      <span class="hero-badge">零基础转行 AI PM · 不卖课</span>
+      <h1>把你过去的经验<em>直接平移到</em>AI PM 岗位</h1>
+      <p class="hero-desc">
+        AI 分析你的行业背景，识别<strong>可迁移能力</strong>，动态生成专属最短学习路径。
+        不给你一堆课程，只给你一张<strong>为你压缩过的地图</strong>。
+      </p>
+      <div class="hero-cta">
+        <button type="button" class="btn btn-primary btn-xl" data-page="onboarding">
+          开始生成我的专属路径 →
+        </button>
+        <span class="hero-meta">30 秒完成 · 免费使用</span>
+      </div>
+      <div class="stats">
+        <div class="stat-item">
+          <strong>持续迭代中</strong>
+          <span>早期用户专属免费</span>
+        </div>
+        <div class="stat-item">
+          <strong>4–6 个月</strong>
+          <span>参考转行周期</span>
+        </div>
+        <div class="stat-item">
+          <strong>100% 免费</strong>
+          <span>不卖课不认证</span>
+        </div>
+      </div>
+    </div>
+    <div class="preview-wrap" aria-hidden="true">
+      <div class="preview-card">
+        <div class="preview-head">
+          <span>专属路径预览</span>
+          <div class="preview-progress">
+            <div class="progress-track"><div class="progress-fill" style="width:38%"></div></div>
+            <span>岗位准备度 38%</span>
+          </div>
+        </div>
+        <ul class="preview-nodes">
+          <li class="preview-node">
+            <span>节点 1 · AI 产品通识</span>
+            <span class="tag tag-green">✓ 完成</span>
+          </li>
+          <li class="preview-node active">
+            <span>节点 2 · 大模型边界</span>
+            <span class="tag tag-orange">⚡ 进行中</span>
+            <p class="preview-tip">
+              💡 <strong>AI 分析：</strong>你的人文地理背景擅长系统分析，
+              此节点可<strong>缩短 40%</strong> 学习时间——空间系统分析
+              与大模型边界理解高度相通
+            </p>
+          </li>
+          <li class="preview-node">
+            <span>节点 3 · Python 基础</span>
+            <span class="tag tag-gold">⏭ 可跳过</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🔧 新增：产品方法论展示 -->
+  <section class="section-methodology" id="method">
+    <h2>🤖 背后：AI 如何为你生成最短路径</h2>
+    <div class="method-grid">
+      <article class="method-card">
+        <div class="method-step">1</div>
+        <h4>能力映射引擎</h4>
+        <p>将你行业背景中的具体工作能力，与 AI PM 岗位能力模型进行语义匹配，识别可直接平移的 12 项核心能力。</p>
+        <div class="ai-note">🔍 面试官视角：产品助理需要理解用户，这正是如何理解用户的体现——不是给所有人同一套方案</div>
+      </article>
+      <article class="method-card">
+        <div class="method-step">2</div>
+        <h4>路径压缩算法</h4>
+        <p>对于你已具备底层能力的节点，自动缩短学时或标记为可跳过。不做"加课"，只做"减负"。</p>
+        <div class="ai-note">💡 核心产品决策：为什么不推荐所有课程？因为转行者最大的痛点是"信息过载"，而非"信息不足"</div>
+      </article>
+      <article class="method-card">
+        <div class="method-step">3</div>
+        <h4>节点动态排序</h4>
+        <p>根据岗位准备度缺口，优先安排"投入产出比最高的节点"，让你的每次学习都让准备度最快速上升。</p>
+        <div class="ai-note">📊 指标意识：每个节点完成后，岗位准备度实时更新——这是产品经理必须建立的数据反馈思维</div>
+      </article>
+    </div>
+  </section>
+
+  <!-- 成功案例 -->
+  <section class="section-cases" id="cases">
+    <div class="section-cases-inner">
+      <h2>📋 相似背景，已成功转行</h2>
+      <div class="landing-case-grid">
+        <article class="landing-case-card">
+          <div class="avatar">李</div>
+          <div>
+            <h3>城乡规划硕士 → 字节 AI PM</h3>
+            <p>3.5 个月完成转行。空间分析背景在需求文档模块节省大量时间。</p>
+            <span class="highlight">✓ 与你的背景最相似</span>
+          </div>
+        </article>
+        <article class="landing-case-card">
+          <div class="avatar">王</div>
+          <div>
+            <h3>人力资源 → 美团 AI 产品助理</h3>
+            <p>4 个月完成。多方协调经验直接迁移到 PRD 撰写与跨团队沟通。</p>
+            <span class="highlight">✓ 零技术背景转行</span>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section-faq" id="faq">
+    <div class="section-faq-inner">
+      <h2>❓ 常见问题</h2>
+      <div class="faq-list" role="list">
+        <details class="faq-item" open>
+          <summary>PathAI 和在线课程平台有什么区别？</summary>
+          <p>在线课程平台给你"图书馆"，PathAI 给你"导航"。我们不生产课程，我们根据你的背景<strong>压缩学习节点</strong>，只推荐对你有用的最短路径与免费资源。核心差异：<strong>个性化压缩 vs. 标准化推送</strong>。</p>
+        </details>
+        <details class="faq-item">
+          <summary>零基础、非技术背景真的可以转行 AI PM 吗？</summary>
+          <p>可以。AI 产品助理/产品经理的核心能力是<strong>理解用户、定义需求、推动落地</strong>，而非写代码。系统会识别你可迁移的能力——系统分析、需求沟通、文档写作——这些能力在 AI PM 岗位同样核心，只是换了应用场景。</p>
+        </details>
+        <details class="faq-item">
+          <summary>这个产品现在是真实的 AI 在运行吗？</summary>
+          <p>当前版本是 MVP Demo，展示了产品的核心设计逻辑（能力映射→路径压缩→动态排序）。实际产品将接入大模型 API，实现真正的语义匹配和动态路径生成。Demo 的目的就是验证"路径压缩"这个核心价值假设。</p>
+        </details>
+      </div>
+    </div>
+  </section>
+</section>
+
+<!-- ============================================================
+     页面2：Onboarding（背景输入 + 目标岗位 + 生成中）
+     ============================================================ -->
+<section id="page-onboarding" class="page" aria-label="路径生成">
+  <header class="nav">
+    <div class="nav-left">
+      <span class="logo" data-page="landing" tabindex="0" role="link" title="回到首页">
+        <span class="logo-icon">P</span>PathAI
+      </span>
+    </div>
+  </header>
+
+  <ol class="stepper" id="stepper" role="progressbar" aria-label="生成步骤">
+    <li class="step active" data-s="1"><span class="step-dot">1</span>行业背景</li>
+    <li class="step" data-s="2"><span class="step-dot">2</span>目标岗位</li>
+    <li class="step" data-s="3"><span class="step-dot">3</span>AI 生成路径</li>
+  </ol>
+
+  <!-- Step 1: 行业背景 -->
+  <div class="onboard-step active" data-os="1">
+    <div class="two-col">
+      <div>
+        <h2>你目前在哪个行业？</h2>
+        <p class="subtitle">AI 会根据你的行业背景，从 12 项 AI PM 核心能力中识别你可直接平移的能力</p>
+        <label class="field-label">选择你的行业（可多选）</label>
+        <div class="tag-grid" id="industry-tags" role="group" aria-label="行业选择"></div>
+        <label class="field-label" for="job-desc">简单描述你的工作职能 <span style="color:var(--text-400);font-weight:400;">（选填，写越详细 AI 分析越准）</span></label>
+        <textarea id="job-desc" placeholder="例：我从事城市地理信息分析工作，负责空间数据建模、专题地图制作、以及规划方案的可视化呈现……" aria-label="工作职能描述"></textarea>
+        <button type="button" class="btn btn-primary btn-block" id="to-step2">下一步：选择目标岗位 →</button>
+      </div>
+      <aside>
+        <div class="ai-panel">
+          <div class="ai-panel-title">
+            <span class="spark">✦</span> AI 实时分析
+            <span class="dot"></span>
+          </div>
+          <div class="transfer-card" id="transfer-card-1">
+            <h4>🔍 正在识别可迁移能力…</h4>
+            <ul id="transfer-list"></ul>
+          </div>
+          <p class="ai-summary" id="compress-text"></p>
+        </div>
+        <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-top:16px;">
+          <h4 style="font-size:14px;margin-bottom:10px;">👤 相似背景的成功转行者</h4>
+          <div style="display:flex;gap:12px;align-items:flex-start;">
+            <div class="avatar">李</div>
+            <div>
+              <strong style="font-size:13px;">城乡规划硕士 → 字节 AI PM</strong>
+              <p style="font-size:12px;color:var(--text-600);margin-top:2px;">3.5 个月 · 空间分析背景在需求文档模块节省了大量时间</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- Step 2: 目标岗位 -->
+  <div class="onboard-step" data-os="2">
+    <div class="two-col">
+      <div>
+        <h2>你的目标岗位是？</h2>
+        <p class="subtitle">不同岗位对应不同的能力权重，AI 会据此调整路径优先级</p>
+        <div class="role-list" id="role-list" role="radiogroup" aria-label="目标岗位">
+          <label class="role-card selected" tabindex="0">
+            <input type="radio" name="role" value="AI 产品助理" checked />
+            <div>
+              <strong>AI 产品助理</strong>
+              <span class="role-desc">入门岗位 · 侧重执行与协作 · 最推荐零基础转行者</span>
+              <span class="role-match">🎯 匹配度：高（你的背景适配入门级岗位）</span>
+            </div>
+          </label>
+          <label class="role-card" tabindex="0">
+            <input type="radio" name="role" value="AI 产品经理" />
+            <div>
+              <strong>AI 产品经理</strong>
+              <span class="role-desc">独立负责 AI 功能模块 · 需要 1-2 年产品经验</span>
+              <span class="role-match">🎯 匹配度：中（建议先从助理岗入手）</span>
+            </div>
+          </label>
+          <label class="role-card" tabindex="0">
+            <input type="radio" name="role" value="AI 产品运营" />
+            <div>
+              <strong>AI 产品运营</strong>
+              <span class="role-desc">增长与用户运营方向 · 适合有运营背景者</span>
+              <span class="role-match">🎯 匹配度：中（需要补充运营方法论）</span>
+            </div>
+          </label>
+        </div>
+        <button type="button" class="btn btn-primary btn-block" id="to-step3">下一步：AI 生成专属路径 →</button>
+        <button type="button" class="btn btn-ghost btn-block" id="back-step1">← 返回上一步</button>
+      </div>
+      <aside class="preview-side">
+        <h4 id="preview-route">人文地理硕士 → AI 产品助理</h4>
+        <ul>
+          <li>8 个学习节点（其中 1 个标记为可跳过）</li>
+          <li>预计总学时：约 30 小时 → 你的路径仅需约 22 小时</li>
+          <li>参考转行周期：3.5–4.5 个月</li>
+          <li>岗位准备度起点：38%（优于平均值 25%）</li>
+        </ul>
+        <p class="hint">💡 节点 3「Python 基础」建议标注为可跳过——你的背景不需要写代码，只需读懂逻辑</p>
+        <p class="case-ref">📊 基于 <strong>200+ 转行案例</strong>的训练数据估算</p>
+      </aside>
+    </div>
+  </div>
+
+  <!-- Step 3: 生成中 -->
+  <div class="onboard-step" data-os="3">
+    <div class="loading-panel">
+      <div class="spinner"></div>
+      <h2>AI 正在分析你的背景…</h2>
+      <p>能力语义匹配 → 路径压缩计算 → 节点动态排序</p>
+      <ul class="load-steps" id="load-steps">
+        <li class="done show">✓ 识别可迁移能力（匹配 12 项核心能力模型）</li>
+        <li class="done show">✓ 匹配目标岗位（AI 产品助理 · 能力权重计算）</li>
+        <li class="active show">● 压缩学习节点（识别可跳过节点 · 压缩单节点学时）</li>
+        <li class="show">○ 生成节点详情与推荐资源</li>
+        <li class="show">○ 计算初始岗位准备度</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     页面3：Path（学习路径）
+     ============================================================ -->
+<section id="page-path" class="page" aria-label="学习路径">
+  <header class="nav">
+    <div class="nav-left">
+      <span class="logo" data-page="landing" tabindex="0" role="link" title="回到首页">
+        <span class="logo-icon">P</span>PathAI
+      </span>
+      <button class="mobile-menu-btn" id="mobile-menu-btn-path" aria-label="节点列表" title="切换节点列表">☰</button>
+    </div>
+    <span class="nav-center" id="path-route">人文地理硕士 → AI 产品助理</span>
+    <div class="nav-right">
+      <button type="button" class="btn btn-sm btn-outline" id="preview-complete" title="面试演示用">预览反馈页</button>
+      <div class="readiness-bar-wrap">
+        <span>岗位准备度 <strong id="readiness-text">38%</strong></span>
+        <div class="progress-track"><div class="progress-fill" id="readiness-fill" style="width:38%"></div></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="complete-banner" id="complete-banner" role="alert">
+    <p>🎉 恭喜！全部节点已完成，岗位准备度显著提升</p>
+    <button type="button" class="btn btn-primary btn-sm" id="go-complete">查看反馈报告 →</button>
+  </div>
+
+  <div class="path-layout">
+    <aside class="path-sidebar" id="path-sidebar">
+      <h3>📋 你的学习路径 · 8 节点</h3>
+      <ul class="node-list" id="node-list" role="listbox" aria-label="学习节点列表"></ul>
+      <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border);">
+        <p style="font-size:12px;color:var(--text-400);margin-bottom:8px;">当前进度：
+          <strong style="color:var(--primary);" id="node-progress-text">1/8</strong>
+        </p>
+        <button type="button" class="btn btn-outline" style="width:100%;font-size:13px;" id="btn-edit-bg">✎ 修改我的背景</button>
+      </div>
+    </aside>
+    <main class="path-detail" id="path-detail" role="main" aria-live="polite"></main>
+  </div>
+</section>
+
+<!-- ============================================================
+     页面4：Complete（反馈页）
+     ============================================================ -->
+<section id="page-complete" class="page" aria-label="反馈报告">
+  <header class="nav">
+    <div class="nav-left">
+      <span class="logo" data-page="landing" tabindex="0" role="link" title="回到首页">
+        <span class="logo-icon">P</span>PathAI
+      </span>
+    </div>
+    <div class="nav-right">
+      <div class="readiness-bar-wrap">
+        <span>岗位准备度 <strong id="complete-readiness-nav">60%</strong></span>
+        <div class="progress-track">
+          <div class="progress-fill green" id="complete-readiness-nav-bar" style="width:60%"></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="complete-wrap">
+    <div class="complete-top">
+      <div>
+        <div class="complete-icon">✓</div>
+        <h1>学习路径全部完成</h1>
+        <p class="complete-sub" id="complete-sub">人文地理硕士 → AI 产品助理</p>
+        <p class="complete-desc" id="complete-desc">
+          你用了 <strong>3 周</strong> 完成了通常需要 <strong>6 周</strong> 的路径。<br>
+          你的行业背景在多个节点上直接平移了能力，从而节省了大量学习时间。
+        </p>
+      </div>
+      <div class="change-card">
+        <h3>📈 岗位准备度变化</h3>
+        <div class="change-nums">
+          <span class="from" id="complete-from">38%</span>
+          <span>→</span>
+          <span class="to" id="complete-to">60%</span>
+          <span class="badge-up" id="complete-delta">+22%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill green" id="complete-progress-bar" style="width:60%"></div>
+        </div>
+        <p class="note">
+          再完成 <strong>2 个核心模块</strong>（AI 产品实战项目 + 模拟面试强化），准备度可达 <strong>80%</strong>，届时建议开始投递简历。
+        </p>
+      </div>
+    </div>
+
+    <h2 class="section-title">📋 下一步行动计划</h2>
+    <div class="suggest-grid">
+      <article class="suggest-card">
+        <div class="suggest-icon blue">📜</div>
+        <h3>获取行业证书背书</h3>
+        <p>完成 Google AI Essentials 课程第 2 模块，3 天内可获证。零基础简历上最有效的 AI 能力第三方背书。</p>
+        <button type="button" class="btn btn-outline-primary btn-block demo-action" data-demo="Coursera 证书">前往 Coursera →</button>
+      </article>
+      <article class="suggest-card">
+        <div class="suggest-icon purple">📄</div>
+        <h3>用 AI PM 语言重塑简历</h3>
+        <p>将你的行业经验翻译为产品经理熟悉的术语（空间分析 → 系统能力，项目报告 → PRD 写作），AI 辅助生成关键词优化建议。</p>
+        <button type="button" class="btn btn-outline btn-block demo-action" data-demo="简历重塑">查看简历优化建议 →</button>
+      </article>
+      <article class="suggest-card">
+        <div class="suggest-icon orange">🔍</div>
+        <h3>开始精准投递</h3>
+        <p>当前可匹配 12 个 AI 产品助理岗位（含字节、美团、小红书等），优先推荐 AI 教育、AI 地图等与你背景交叉的赛道。</p>
+        <button type="button" class="btn btn-outline btn-block demo-action" data-demo="匹配岗位">查看匹配岗位 →</button>
+      </article>
+    </div>
+
+    <h2 class="section-title">📊 你的能力雷达（AI 评估）</h2>
+    <div style="background:var(--bg-50);border-radius:var(--radius-lg);padding:24px 28px;margin-bottom:32px;border:1px solid var(--border);">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;" id="skill-radar">
+        <!-- JS 动态填充 -->
+      </div>
+    </div>
+
+    <div class="complete-btns">
+      <button type="button" class="btn btn-primary btn-lg" data-page="path">返回学习路径</button>
+      <button type="button" class="btn btn-ghost" data-page="landing">回到首页</button>
+    </div>
+  </div>
+</section>
+
+<!-- Toast -->
+<div class="toast" id="toast" aria-live="polite" aria-atomic="true"></div>
+
+<!-- ============================================================
+     🔧 重构后的 JavaScript
+     - 更清晰的状态管理
+     - 事件委托减少监听器
+     - 渐进式 AI 分析模拟
+     - 响应式适配逻辑
+     ============================================================ -->
+<script>
+(function () {
+  "use strict";
+
+  // ==================== 常量 & 数据 ====================
+
+  var INDUSTRIES = [
+    "建筑 / 城规", "人力资源", "金融 / 财务", "教育", "传统运营",
+    "销售 / 市场", "地产", "医疗 / 健康", "学术 / 科研", "其他"
+  ];
+
+  // 🔧 增强：每个行业的可迁移能力映射（更具体、更产品化）
+  var TRANSFER_MAP = {
+    "建筑 / 城规": [
+      "空间系统分析 → 大模型能力边界理解",
+      "多方需求协调 → PRD 结构化撰写",
+      "GIS 数据可视化 → AI 产品指标体系",
+      "规划方案汇报 → 产品方案表达与宣讲"
+    ],
+    "人力资源": [
+      "人才需求分析 → 用户需求研究方法",
+      "KPI 绩效体系设计 → 产品数据指标设计",
+      "多部门协调沟通 → 跨团队产品推动",
+      "招聘面试技巧 → 用户访谈方法论"
+    ],
+    "金融 / 财务": [
+      "数据建模能力 → AI 产品指标设计",
+      "风险评估框架 → 产品决策模型",
+      "结构化报告撰写 → PRD 文档写作",
+      "尽职调查方法 → 竞品分析框架"
+    ],
+    "教育": [
+      "课程体系设计 → 产品功能规划",
+      "学员需求分析 → 用户研究",
+      "教学反馈收集 → 产品迭代思维",
+      "教案结构设计 → 需求文档逻辑"
+    ],
+    "传统运营": [
+      "流程优化经验 → 产品效率设计",
+      "用户触达策略 → 增长方法论",
+      "数据复盘习惯 → 产品指标分析",
+      "多角色协调 → 项目推进能力"
+    ],
+    "销售 / 市场": [
+      "客户需求挖掘 → 用户痛点分析",
+      "说服沟通能力 → 产品提案表达",
+      "市场洞察分析 → 竞品调研方法",
+      "转化率意识 → 产品数据敏感度"
+    ],
+    "地产": [
+      "项目全周期管理 → 产品路线图规划",
+      "客户需求对接 → 用户需求文档",
+      "投资回报分析 → 产品商业思维",
+      "多方谈判协调 → 跨部门推动落地"
+    ],
+    "医疗 / 健康": [
+      "临床流程分析 → 业务需求梳理",
+      "患者体验关注 → 用户同理心",
+      "数据记录习惯 → 产品埋点思维",
+      "诊疗方案设计 → 产品方案能力"
+    ],
+    "学术 / 科研": [
+      "文献综述能力 → 竞品分析方法",
+      "实验设计逻辑 → AB 测试思维",
+      "论文结构化写作 → PRD 撰写逻辑",
+      "数据统计分析 → 产品数据解读"
+    ],
+    "其他": [
+      "系统性思维 → 产品全局视角",
+      "跨领域沟通 → 团队协作能力",
+      "问题拆解习惯 → 需求分析框架",
+      "文档写作经验 → 产品文档基础"
+    ]
+  };
+
+  // 学习节点（保持不变，内容已经很好）
+  var NODES = [
+    {
+      id: 1, title: "AI 产品通识", skippable: false,
+      hours: "4", optimized: "4",
+      why: "你过去的行业背景训练了对复杂系统的整体认知，这正是理解 AI 产品全貌的底层能力，从宏观框架切入比从技术细节切入快 3 倍。",
+      whyTag: "底层能力迁移 · 无需技术基础",
+      resources: [
+        { name: "AI 产品经理入门指南", platform: "免费文章", time: "约 45 分钟", href: "#" },
+        { name: "Google AI Essentials 第 1 模块", platform: "Coursera", time: "约 1.5 小时", href: "#" },
+        { name: "画出你的 AI 产品认知地图", platform: "实操练习", time: "约 30 分钟", href: "#" }
+      ],
+      standard: "能用自己的话解释 AI 产品的核心组成（模型、数据、场景、用户），并说出 3 个常见 AI 产品类型。"
+    },
+    {
+      id: 2, title: "大模型边界", skippable: false,
+      hours: "3", optimized: "1.8",
+      why: "你的空间系统分析能力与理解大模型边界高度相通——都需要判断系统在什么条件下失效，跳过基础定义直接从失效场景切入，缩短 40% 时间。",
+      whyTag: "思维方式相通 · 缩短 40% 学时",
+      resources: [
+        { name: "Google AI Essentials 第 2 模块", platform: "Coursera", time: "约 1.5 小时", href: "#" },
+        { name: "大模型能力边界案例集", platform: "免费文章", time: "约 40 分钟", href: "#" },
+        { name: "列出 5 个「AI 做不到」的场景", platform: "实操练习", time: "约 20 分钟", href: "#" }
+      ],
+      standard: "能用自己的话解释大模型的能力边界，并在 PRD 中准确描述 AI 功能的限制条件。"
+    },
+    {
+      id: 3, title: "Python 基础", skippable: true,
+      hours: "6", optimized: "可跳过",
+      why: "你的背景不需要写代码，只需读懂逻辑即可。此节点标记为可跳过——AI PM 的核心价值在于定义「做什么」，而非「怎么写」。如果你未来想做技术型 PM 再回来补。",
+      whyTag: "非必需技能 · 按需可选",
+      resources: [
+        { name: "Python 语法速览（PM 版）", platform: "免费文章", time: "约 1 小时", href: "#" },
+        { name: "读懂 AI 产品中的代码 Demo", platform: "实操练习", time: "约 45 分钟", href: "#" }
+      ],
+      standard: "能阅读简单的 Python 伪代码，理解变量、循环、函数的基本逻辑即可。"
+    },
+    {
+      id: 4, title: "Prompt 工程", skippable: false,
+      hours: "5", optimized: "4",
+      why: "这是 AI PM 最高频的日常工作技能——每天都要和模型对话来验证产品假设。你的文字表达和逻辑组织能力直接迁移，入门门槛极低但天花板极高。",
+      whyTag: "高频技能 · 文字能力直接迁移",
+      resources: [
+        { name: "ChatGPT Prompt Engineering for Developers", platform: "Coursera", time: "约 2 小时", href: "#" },
+        { name: "Prompt 模板库（产品场景）", platform: "免费文章", time: "约 30 分钟", href: "#" },
+        { name: "为 3 个产品功能写 Prompt", platform: "实操练习", time: "约 1 小时", href: "#" }
+      ],
+      standard: "能为产品场景设计结构化 Prompt，并知道如何迭代优化输出质量。"
+    },
+    {
+      id: 5, title: "AI 产品需求文档", skippable: false,
+      hours: "6", optimized: "3.5",
+      why: "你在学术写作中训练的结构化表达能力，与 PRD 写作逻辑高度重合——都是从背景→目标→方案→验收的论证结构。你只需重点学习 AI 功能特有的描述方式（模型能力描述、边界说明、评估指标）。",
+      whyTag: "学术写作直接迁移 · 重点学 AI 特有部分",
+      resources: [
+        { name: "AI 功能 PRD 模板与范例", platform: "免费文章", time: "约 1 小时", href: "#" },
+        { name: "撰写一份 AI 功能 PRD", platform: "实操练习", time: "约 2 小时", href: "#" },
+        { name: "LLM 功能需求 Checklist", platform: "免费文章", time: "约 30 分钟", href: "#" }
+      ],
+      standard: "能独立撰写包含 AI 能力描述、边界说明、评估指标的 PRD 初稿。"
+    },
+    {
+      id: 6, title: "用户研究方法", skippable: false,
+      hours: "4", optimized: "2.5",
+      why: "你在原行业中积累的需求调研与沟通方法，与产品用户研究本质上是同一套方法论的两种应用场景。你只需学会将这套方法论迁移到产品场景中，并补充产品特有的用研工具（用户旅程图、同理心地图）。",
+      whyTag: "方法论复用 · 只需换应用场景",
+      resources: [
+        { name: "用户访谈指南（AI 产品版）", platform: "免费文章", time: "约 45 分钟", href: "#" },
+        { name: "完成 3 次模拟用户访谈", platform: "实操练习", time: "约 1.5 小时", href: "#" },
+        { name: "IDEO 设计思维入门", platform: "Coursera", time: "约 1 小时", href: "#" }
+      ],
+      standard: "能设计用户访谈提纲，并从访谈中提炼可落地的产品洞察。"
+    },
+    {
+      id: 7, title: "数据指标体系", skippable: false,
+      hours: "5", optimized: "3",
+      why: "你有数据分析基础（空间数据的处理经验），此节点重点不是学统计方法，而是学会定义产品北极星指标——即找到那个能真正反映用户价值的核心指标，而非虚荣指标。",
+      whyTag: "有数据基础 · 只需学产品视角",
+      resources: [
+        { name: "AI 产品核心指标框架", platform: "免费文章", time: "约 40 分钟", href: "#" },
+        { name: "为一个 AI 功能设计指标树", platform: "实操练习", time: "约 1 小时", href: "#" },
+        { name: "AARRR 与 AI 产品增长", platform: "免费文章", time: "约 30 分钟", href: "#" }
+      ],
+      standard: "能为 AI 功能定义北极星指标和 2–3 个关键过程指标，并说明衡量方式。"
+    },
+    {
+      id: 8, title: "模拟面试准备", skippable: false,
+      hours: "3", optimized: "3",
+      why: "综合前 7 个节点的学习成果，用你的真实转行故事构建面试叙事。你的跨行业背景不是劣势，反而是差异化亮点——比科班出身的产品新人更有独特的视角和故事。面试官会喜欢「从地理空间分析到 AI 产品」这个叙事。",
+      whyTag: "差异化叙事 · 跨行业背景是优势",
+      resources: [
+        { name: "AI PM 面试题库精选", platform: "免费文章", time: "约 1 小时", href: "#" },
+        { name: "撰写你的转行 STAR 故事", platform: "实操练习", time: "约 1 小时", href: "#" },
+        { name: "模拟面试录音自评", platform: "实操练习", time: "约 45 分钟", href: "#" }
+      ],
+      standard: "能用 STAR 法则清晰讲述转行动机、学习路径和 1 个产品案例。"
+    }
+  ];
+
+  // 🔧 每个行业的节点定制数据（更精细的优化时间）
+  var NODE_INDUSTRY_DATA = {
+    "建筑 / 城规": {
+      1: { why: "你对城市系统的整体认知，是理解AI产品全貌的天然底层能力——都是从宏观系统视角理解复杂组成。", optimized: "2.5" },
+      2: { why: "空间系统分析与理解大模型边界高度相通：都需要判断系统在什么边界条件下会失效，你可直接从失效场景切入学习。", optimized: "1.8" },
+      4: { why: "你的图纸说明和项目汇报训练了精准的结构化表达，Prompt工程对你几乎是零门槛。", optimized: "3" },
+      5: { why: "城规项目的需求协调报告与PRD写作高度重合：都是从「现状分析→目标定义→方案设计→验收标准」的论证结构。", optimized: "3" },
+      6: { why: "城规中的居民调研与用户研究本质相同——访谈、观察、提炼需求、形成方案，你只需把场景从社区换到产品。", optimized: "2" },
+      7: { why: "你有GIS数据分析基础（空间统计、专题制图），产品指标体系对你来说只是换了一套数据维度的应用场景。", optimized: "2.5" },
+      8: { why: "城规背景在AI PM面试中极具差异化：用「从空间系统分析到AI产品系统设计」的叙事，面试官会记住你。", optimized: "3" }
+    },
+    "人力资源": {
+      1: { why: "你对组织系统和人的行为的理解，是读懂AI产品用户心理的天然优势——产品最终是给人用的。", optimized: "2.5" },
+      2: { why: "你在绩效管理中判断人的能力边界，与理解大模型能力边界是同一种元认知——都在回答「什么情况会失效」。", optimized: "2" },
+      4: { why: "你写JD和沟通方案的能力直接迁移到Prompt设计——结构化描述+预期输出+评估标准，逻辑完全相通。", optimized: "3" },
+      5: { why: "你写过大量结构化的HR方案文档，PRD对你来说只是换了一个模板和场景。", optimized: "3" },
+      6: { why: "用户研究就是把招聘面试的方法用在产品上——你的访谈、追问、需求挖掘能力直接复用。", optimized: "1.5" },
+      7: { why: "你熟悉KPI体系设计（SMART原则、指标拆解），产品指标体系与HR指标体系的底层逻辑完全相通。", optimized: "2" },
+      8: { why: "HR背景让你天然擅长讲「人的故事」，用你的人才发展视角解读AI PM转行会非常有说服力。", optimized: "3" }
+    },
+    "金融 / 财务": {
+      1: { why: "你对业务流程和数据驱动决策的理解，是学习AI产品逻辑最快的切入点——金融和产品都需要在不确定性中做结构化决策。", optimized: "2" },
+      2: { why: "金融中的风险评估思维与理解大模型边界高度相通——都在判断系统在什么极端条件下会出错。", optimized: "1.5" },
+      4: { why: "你写研究报告的结构化表达能力（假设→分析→结论），让Prompt工程的入门对你几乎没有门槛。", optimized: "2.5" },
+      5: { why: "金融分析报告和PRD都是结构化的决策文档，你需要学的只是从「投资建议」切换到「产品方案」的视角。", optimized: "2.5" },
+      6: { why: "你在尽职调查中的管理层访谈方法，与用户研究访谈是同一套信息获取的底层逻辑。", optimized: "2" },
+      7: { why: "数据建模和财务指标体系是你的核心强项，产品北极星指标的设计对你来说轻车熟路。", optimized: "1.5" },
+      8: { why: "金融背景的严谨性和数据敏感度是AI PM面试中的加分项，用你的量化思维讲产品故事。", optimized: "3" }
+    },
+    "教育": {
+      1: { why: "你对学习路径设计的理解，让你天然能从「用户学习视角」看待AI产品的功能设计——这恰恰是很多技术出身的PM缺乏的。", optimized: "2.5" },
+      2: { why: "你在教学中判断学生的认知边界（最近发展区），与理解大模型能力边界是同一种元认知能力。", optimized: "2" },
+      4: { why: "教案和课程设计训练了你将复杂内容结构化的能力——Prompt设计的核心就是把复杂指令拆解为清晰的步骤。", optimized: "2.5" },
+      5: { why: "课程方案和PRD都是面向特定用户的结构化交付物：教学目标→教学内容→评估方式 vs 产品目标→功能描述→验收标准。", optimized: "3" },
+      6: { why: "你每天都在做用户研究——了解学生的学习需求和痛点，只需把场景从教室换到产品访谈室。", optimized: "1.5" },
+      7: { why: "你熟悉学习效果的评估指标（完成率、掌握度、NPS），产品数据指标体系与此逻辑完全相通。", optimized: "2.5" },
+      8: { why: "教育背景在AI教育类/学习类产品面试中是顶级背书，用你「设计学习体验」的经验讲产品故事。", optimized: "3" }
+    },
+    "传统运营": {
+      1: { why: "你对业务流程和用户增长的理解，是学习AI产品逻辑最贴地气的起点——你已经在执行端理解了产品对用户的价值。", optimized: "2.5" },
+      2: { why: "你在运营中判断活动效果边界（什么活动能拉新、什么不能），与理解大模型能力边界有相通的系统思维。", optimized: "2" },
+      4: { why: "你写过大量运营文案和活动策划方案，Prompt设计的文字表达和逻辑组织对你完全不是障碍。", optimized: "2.5" },
+      5: { why: "运营SOP和PRD都是面向目标的执行文档——你需要学的只是AI功能的描述规范，底层逻辑完全复用。", optimized: "3" },
+      6: { why: "你每天都在分析用户行为数据——用户研究只是把定量数据分析扩展到了定性访谈维度。", optimized: "2" },
+      7: { why: "你熟悉GMV、DAU、留存率等运营核心指标，产品北极星指标体系对你来说只是换了一套更聚焦用户价值的框架。", optimized: "1.5" },
+      8: { why: "运营背景让你天然懂增长和用户，AI产品面试中这是非常实用的差异化优势——你知道产品不仅要做出来，还要让用户用起来。", optimized: "3" }
+    },
+    "销售 / 市场": {
+      1: { why: "你对客户需求和市场竞争的敏感度，是学习AI产品定位和价值主张最快的切入点——你已经在「卖」产品了。", optimized: "2" },
+      2: { why: "你在销售中判断客户预期与产品能力的差距（过度承诺→客户流失），与理解大模型边界是同一种边界判断思维。", optimized: "2" },
+      4: { why: "你写销售话术和市场文案的能力——精准描述、击中痛点、引导行动——让你在Prompt设计上有天然的语言优势。", optimized: "2.5" },
+      5: { why: "你写过商业提案和方案书，PRD与商业提案的结构逻辑高度相通，迁移成本极低。", optimized: "2.5" },
+      6: { why: "你每天都在做客户需求挖掘——用户研究访谈就是把「客户」换成「产品用户」，发现问题→定义需求。", optimized: "1.5" },
+      7: { why: "你熟悉转化率、ROI、CAC等市场核心指标，产品数据指标体系对你来说只是扩展了指标维度和分析视角。", optimized: "2" },
+      8: { why: "销售背景让你天然擅长讲价值故事和建立说服逻辑，AI PM面试中这是极强的表达与沟通优势。", optimized: "3" }
+    },
+    "地产": {
+      1: { why: "你对项目全周期管理（拿地→设计→建造→交付）的理解，是学习AI产品从0到1路线图规划的天然底层能力。", optimized: "2.5" },
+      2: { why: "地产项目中判断风险节点（什么环节容易出问题），与理解大模型边界的思维方式高度相通。", optimized: "2" },
+      4: { why: "你写项目定位报告和客户沟通文案的能力，让Prompt设计对你几乎没有入门门槛。", optimized: "3" },
+      5: { why: "项目可研报告和PRD都是结构化的决策支持文档，你需要学的只是AI产品的特有格式和术语。", optimized: "3" },
+      6: { why: "你在客户接待和需求对接中积累的沟通方法，与用户研究访谈是同一套信息获取与分析逻辑。", optimized: "2" },
+      7: { why: "你熟悉去化率、租金回报率等项目核心指标，产品北极星指标的设计逻辑与此完全相通——找到那个真正决定成败的数字。", optimized: "2.5" },
+      8: { why: "地产背景在AI+不动产/智慧城市方向面试中是极稀缺的背书，用你的项目管理经验讲产品故事。", optimized: "3" }
+    },
+    "医疗 / 健康": {
+      1: { why: "你对医疗流程和患者体验的深度理解，是学习AI医疗健康产品最稀缺的背景优势——对这个赛道的公司来说，懂场景比懂技术更难。", optimized: "2" },
+      2: { why: "临床中判断治疗方案适用边界（什么病人能用、什么时候不能用），与理解大模型能力边界有高度相通的审慎思维。", optimized: "1.5" },
+      4: { why: "你写病历和医疗报告的严谨性和结构化，让你的Prompt设计天然比其他背景更精准、更少歧义。", optimized: "3" },
+      5: { why: "医疗SOP和PRD都是高度结构化的操作文档（目的→适用范围→操作步骤→注意事项），你需要学的只是产品场景的表达方式。", optimized: "2.5" },
+      6: { why: "你在临床中积累的患者沟通和需求理解能力，是用户研究最核心的同理心基础——而这恰恰是技术背景PM最缺的。", optimized: "1.5" },
+      7: { why: "你熟悉临床指标和健康数据统计，AI医疗产品的数据指标体系对你来说理解成本几乎为零。", optimized: "2" },
+      8: { why: "医疗背景在AI健康产品面试中是极度稀缺的优势——你的专业背书在这个细分赛道无人能复制。", optimized: "3" }
+    },
+    "学术 / 科研": {
+      1: { why: "你的文献综述能力和系统性思维方式，是快速建立AI产品知识框架最高效的方式——你已经习惯了「先理解全貌，再深入研究」。", optimized: "2" },
+      2: { why: "你在科研中判断实验结论适用范围（这个发现在什么条件下成立），与理解大模型能力边界是同一种严谨的边界思维。", optimized: "1.5" },
+      4: { why: "你写论文摘要和研究假设的结构化表达（背景→假设→方法→预期），让Prompt设计对你几乎是零门槛。", optimized: "2" },
+      5: { why: "论文写作和PRD都是结构化的论证文档（问题陈述→文献/竞品→方案→验证），你需要学的只是从学术语言切换到产品语言的翻译能力。", optimized: "2.5" },
+      6: { why: "你的实验设计、问卷调查和数据收集方法论，与用户研究的方法论完全相通——只需换应用场景。", optimized: "1.5" },
+      7: { why: "你有统计分析基础（SPSS/R），产品指标体系对你来说只是换了一套业务场景的数据应用。", optimized: "1.5" },
+      8: { why: "学术背景在AI研究类/工具类产品面试中极具竞争力——用你「从研究到产品」的思维转型故事打动面试官。", optimized: "3" }
+    },
+    "其他": {
+      1: { why: "你过去的行业背景训练了对复杂系统的整体认知——这正是理解AI产品全貌的底层能力，从宏观框架切入比从技术细节切入快得多。", optimized: "2.5" },
+      2: { why: "你在原行业中积累的系统思维和判断力——什么情况下事情会按预期运行、什么情况下会出问题——与理解大模型边界高度相通。", optimized: "2" },
+      4: { why: "你的跨行业表达和沟通经验，让Prompt设计的入门门槛对你极低——Prompt的本质就是清晰、结构化的沟通。", optimized: "3" },
+      5: { why: "你在原行业写过的结构化文档（报告、方案、提案），与PRD写作逻辑高度重合，重点学AI特有部分即可。", optimized: "3" },
+      6: { why: "你在原行业积累的需求理解和沟通方法，与产品用户研究本质上是同一套方法论的两种应用。", optimized: "2" },
+      7: { why: "你有一定的数据意识和分析习惯，此节点重点是学会定义产品北极星指标——而不是从头学统计方法。", optimized: "2.5" },
+      8: { why: "你的跨行业背景反而是差异化亮点——用你真实的转行故事构建独一无二的面试叙事，比科班出身更有记忆点。", optimized: "3" }
+    }
+  };
+
+  // 🔧 新增：能力雷达数据（反馈页使用）
+  var SKILL_RADAR = [
+    { name: "AI 产品认知", base: 55, icon: "🧠" },
+    { name: "需求分析", base: 72, icon: "🎯" },
+    { name: "PRD 写作", base: 68, icon: "📝" },
+    { name: "用户研究", base: 65, icon: "👤" },
+    { name: "数据思维", base: 58, icon: "📊" },
+    { name: "面试表达", base: 50, icon: "💬" }
+  ];
+
+  // ==================== 应用状态 ====================
+  var state = {
+    page: "landing",
+    onboardStep: 1,
+    selectedIndustries: [],
+    role: "AI 产品助理",
+    initialReadiness: 38,
+    readiness: 38,
+    activeNodeId: 2,
+    nodes: NODES.map(function (n) {
+      return {
+        id: n.id, title: n.title, skippable: n.skippable,
+        status: n.id === 1 ? "done" : n.id === 2 ? "current" : "pending"
+      };
+    })
+  };
+
+  // ==================== 工具函数 ====================
+  function $(sel, ctx) { return (ctx || document).querySelector(sel); }
+  function $$(sel, ctx) { return (ctx || document).querySelectorAll(sel); }
+
+  function clamp(val, min, max) {
+    return Math.max(min, Math.min(max, val));
+  }
+
+  // ==================== Toast ====================
+  var toastTimer;
+  function showToast(msg, duration) {
+    var el = $("#toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
+      el.classList.remove("show");
+    }, duration || 2400);
+  }
+
+  // ==================== 页面切换 ====================
+  function showPage(name) {
+    $$(".page").forEach(function (p) {
+      p.classList.toggle("active", p.id === "page-" + name);
+    });
+    state.page = name;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (name === "complete") renderCompletePage();
+    // 更新路径页侧栏（移动端）
+    var sidebar = $("#path-sidebar");
+    if (sidebar) sidebar.classList.remove("mobile-open");
+  }
+
+  // ==================== Stepper ====================
+  function updateStepper(step) {
+    $$("#stepper .step").forEach(function (s) {
+      var n = Number(s.dataset.s);
+      s.classList.remove("active", "done");
+      if (n < step) s.classList.add("done");
+      if (n === step) s.classList.add("active");
+    });
+  }
+
+  function showOnboardStep(n) {
+    $$(".onboard-step").forEach(function (el) {
+      el.classList.toggle("active", Number(el.dataset.os) === n);
+    });
+    state.onboardStep = n;
+    updateStepper(n);
+    if (n === 3) runLoadingSimulation();
+    // 移动端滚动到内容区
+    var activeStep = $(".onboard-step.active");
+    if (activeStep && window.innerWidth < 768) {
+      activeStep.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+
+  // ==================== AI 分析模拟（渐进式展示） ====================
+  function calcCompress(industryCount) {
+    var percent = 30 + Math.min(industryCount, 3) * 5; // 35%~45%，与实际optimized学时数量级一致
+    return { percent: percent };
+  }
+
+  function renderTransfer() {
+    var list = [];
+    state.selectedIndustries.forEach(function (ind) {
+      (TRANSFER_MAP[ind] || []).forEach(function (item) {
+        if (list.indexOf(item) === -1) list.push(item);
+      });
+    });
+
+    var ul = $("#transfer-list");
+    if (!ul) return;
+
+    // 🔧 渐进展示：每次行业变化时重新渲染，带逐行动画
+    var html = list.map(function (t, i) {
+      return '<li style="animation: slideIn .4s ease forwards; animation-delay:' + (i * .1) + 's;">' + t + '</li>';
+    }).join("");
+
+    // 如果没有选中行业
+    if (list.length === 0) {
+      html = '<li style="color:var(--text-400);">请选择至少一个行业</li>';
+    }
+
+    ul.innerHTML = html;
+
+    // 更新标题
+    var cardTitle = $("#transfer-card-1 h4");
+    if (cardTitle) {
+      cardTitle.textContent = list.length > 0
+        ? '🔍 已识别 ' + list.length + ' 项可迁移能力'
+        : '🔍 请选择行业开始分析';
+    }
+
+    // 更新压缩文本
+    var c = calcCompress(state.selectedIndustries.length);
+    var compressText = $("#compress-text");
+    if (compressText) {
+      if (state.selectedIndustries.length === 0) {
+        compressText.textContent = "选择行业后，AI 将自动分析可迁移能力并计算路径压缩方案";
+      } else {
+        compressText.textContent = "AI 已识别可迁移能力，预计为你节省约 " + c.percent + "% 的学习时长，并标注 1 个可跳过节点（Python 基础）。你的行业背景越垂直，压缩效果越显著。";
+      }
+    }
+  }
+
+  // ==================== 行业标签初始化 ====================
+  function initIndustryTags() {
+    var grid = $("#industry-tags");
+    if (!grid) return;
+
+    grid.innerHTML = INDUSTRIES.map(function (ind) {
+      var sel = state.selectedIndustries.indexOf(ind) !== -1 ? " selected" : "";
+      return '<button type="button" class="tag-btn' + sel + '" data-ind="' + ind + '" aria-pressed="' + (sel ? 'true' : 'false') + '">' + ind + "</button>";
+    }).join("");
+
+    // 🔧 使用事件委托
+    grid.addEventListener("click", function (e) {
+      var btn = e.target.closest(".tag-btn");
+      if (!btn) return;
+      var ind = btn.dataset.ind;
+      var idx = state.selectedIndustries.indexOf(ind);
+      if (idx !== -1) {
+        state.selectedIndustries.splice(idx, 1);
+        btn.classList.remove("selected");
+        btn.setAttribute("aria-pressed", "false");
+      } else {
+        state.selectedIndustries.push(ind);
+        btn.classList.add("selected");
+        btn.setAttribute("aria-pressed", "true");
+      }
+      renderTransfer();
+    });
+
+    // 初始化渲染
+    renderTransfer();
+  }
+
+  // ==================== 路径数据 ====================
+  function getNodeData(id) {
+    var node = NODES.find(function (n) { return n.id === id; });
+    if (!node) return null;
+    var cloned = JSON.parse(JSON.stringify(node));
+    var primaryIndustry = state.selectedIndustries[0] || "其他";
+    var industryData = NODE_INDUSTRY_DATA[primaryIndustry] || NODE_INDUSTRY_DATA["其他"];
+    if (industryData && industryData[id]) {
+      cloned.why = industryData[id].why;
+      if (cloned.optimized !== "可跳过") {
+        cloned.optimized = industryData[id].optimized;
+      }
+    }
+    return cloned;
+  }
+
+  function getIndustryLabel() {
+    return state.selectedIndustries.join("·");
+  }
+
+  // ==================== 准备度 ====================
+  function updateReadiness() {
+    var textEl = $("#readiness-text");
+    var fillEl = $("#readiness-fill");
+    if (textEl) textEl.textContent = state.readiness + "%";
+    if (fillEl) fillEl.style.width = state.readiness + "%";
+  }
+
+  function isAllNodesDone() {
+    return state.nodes.every(function (n) { return n.status === "done"; });
+  }
+
+  // 🔧 更新进度文字
+  function updateNodeProgress() {
+    var doneCount = state.nodes.filter(function (n) { return n.status === "done"; }).length;
+    var el = $("#node-progress-text");
+    if (el) el.textContent = doneCount + "/" + state.nodes.length;
+  }
+
+  // ==================== 路径页 ====================
+  function renderNodeList() {
+    var list = $("#node-list");
+    if (!list) return;
+
+    list.innerHTML = state.nodes.map(function (node) {
+      var cls = "node-item";
+      if (node.status === "done") cls += " done";
+      if (node.id === state.activeNodeId) cls += " current";
+      var icon = node.status === "done" ? "✓" : node.id;
+      var skip = node.skippable ? '<span class="skip-label">可跳过</span>' : "";
+      return '<li class="' + cls + '" data-id="' + node.id + '" role="option" aria-selected="' + (node.id === state.activeNodeId ? 'true' : 'false') + '" tabindex="0">' +
+        '<span class="node-icon" aria-hidden="true">' + icon + "</span>" +
+        "<span>" + node.title + "</span>" + skip + "</li>";
+    }).join("");
+
+    // 🔧 事件委托
+    list.addEventListener("click", function (e) {
+      var item = e.target.closest(".node-item");
+      if (!item) return;
+      state.activeNodeId = Number(item.dataset.id);
+      renderNodeList();
+      renderPathDetail();
+      updateNodeProgress();
+      // 移动端关闭侧栏
+      if (window.innerWidth <= 1024) {
+        $("#path-sidebar").classList.remove("mobile-open");
+      }
+    });
+  }
+
+  function renderPathDetail() {
+    var meta = state.nodes.find(function (n) { return n.id === state.activeNodeId; });
+    var data = getNodeData(state.activeNodeId);
+    if (!meta || !data) return;
+
+    var detail = $("#path-detail");
+    if (!detail) return;
+
+    var statusTag = "";
+    if (meta.status === "done") statusTag = '<span class="tag tag-green">✓ 已完成</span>';
+    else if (meta.status === "current") statusTag = '<span class="tag tag-orange">⚡ 进行中</span>';
+    else statusTag = '<span class="tag tag-default">待开始</span>';
+
+    var timeText;
+    if (data.optimized === "可跳过") {
+      timeText = "此节点建议跳过（预计节省 6 小时）";
+    } else {
+      var savedHours = (parseFloat(data.hours) - parseFloat(data.optimized)).toFixed(1);
+      timeText = "标准 " + data.hours + " 小时 → 你的路径 <em>仅需 " + data.optimized + " 小时</em>";
+      if (parseFloat(savedHours) > 0) {
+        timeText += ' <span class="saved">⏱ 节省 ' + savedHours + ' 小时</span>';
+      }
+    }
+
+    var resourcesHtml = data.resources.map(function (r) {
+      return '<div class="resource-item">' +
+        '<a href="javascript:void(0)" class="demo-action" data-demo="跳转至「' + r.name + '」" title="Demo 演示，点击查看说明">📎 ' + r.name + "</a>" +
+        '<span class="resource-meta">' + r.platform + " · " + r.time + "</span></div>";
+    }).join("");
+
+    var actionsHtml = "";
+    if (meta.status !== "done") {
+      actionsHtml =
+        '<div class="detail-actions">' +
+        '<button type="button" class="btn btn-primary" id="btn-done">✓ 标记为已完成</button>' +
+        (meta.skippable ? '<button type="button" class="btn btn-outline" id="btn-skip">⏭ 跳过此节点</button>' : "") +
+        "</div>";
+    } else {
+      actionsHtml = '<p style="color:var(--green);font-weight:600;margin-top:16px;display:flex;align-items:center;gap:6px;font-size:15px;">✓ 本节点已完成 · 准备度已更新</p>';
+    }
+
+    // 🔧 包装在 detail-content 中以触发切换动画
+    detail.innerHTML = '<div class="detail-content">' +
+      '<div class="detail-header">' +
+      "<h1>节点 " + data.id + " · " + data.title + " " + statusTag + "</h1>" +
+      '<p class="detail-time">' + timeText + "</p></div>" +
+      '<div class="why-card"><h3><span class="spark">✦</span> 为什么你必须学这个？</h3>' +
+      '<p class="why-body">' + data.why + '</p>' +
+      (data.whyTag ? '<span class="why-tagline">' + data.whyTag + '</span>' : '') +
+      "</div>" +
+      '<div class="detail-section"><h3>📚 推荐资源</h3>' + resourcesHtml + "</div>" +
+      '<div class="detail-section"><h3>✅ 完成标准</h3>' +
+      '<div class="completion-box">' + data.standard + "</div></div>" +
+      actionsHtml +
+      "</div>";
+
+    // 绑定按钮事件
+    var doneBtn = $("#btn-done");
+    if (doneBtn) doneBtn.addEventListener("click", function () { finishNode(meta.id, false); });
+    var skipBtn = $("#btn-skip");
+    if (skipBtn) skipBtn.addEventListener("click", function () { finishNode(meta.id, true); });
+
+    updateNodeProgress();
+  }
+
+  function finishNode(id, skipped) {
+    var idx = state.nodes.findIndex(function (n) { return n.id === id; });
+    if (idx === -1 || state.nodes[idx].status === "done") return;
+
+    state.nodes[idx].status = "done";
+    // 🔧 准备度增长更合理（核心节点增长更多）
+    var increment = skipped ? 2 : (state.nodes[idx].skippable ? 3 : 5);
+    state.readiness = Math.min(60, state.readiness + increment);
+    updateReadiness();
+    showToast(skipped ? "⏭ 已跳过「" + state.nodes[idx].title + "」" : "✅「" + state.nodes[idx].title + "」已完成，准备度 +" + increment + "%");
+
+    // 找到下一个未完成节点
+    var next = null;
+    for (var i = 0; i < state.nodes.length; i++) {
+      if (state.nodes[i].status !== "done") { next = state.nodes[i]; break; }
+    }
+    if (next) {
+      state.nodes.forEach(function (n) { if (n.status === "current") n.status = "pending"; });
+      next.status = "current";
+      state.activeNodeId = next.id;
+    }
+    renderNodeList();
+    renderPathDetail();
+    updateNodeProgress();
+    checkAllComplete();
+  }
+
+  function checkAllComplete() {
+    if (isAllNodesDone()) {
+      var banner = $("#complete-banner");
+      if (banner) {
+        banner.classList.add("show");
+      }
+      // 🔧 自动跳转延迟从 800ms 改为 1500ms，给用户反应时间
+      setTimeout(function () {
+        if (isAllNodesDone() && state.page === "path") {
+          goToCompletePage();
+        }
+      }, 1500);
+    }
+  }
+
+  function goToCompletePage() {
+    state.readiness = Math.max(state.readiness, 60);
+    renderCompletePage();
+    showPage("complete");
+    showToast("🎉 学习路径全部完成！");
+  }
+
+  function initPathPage() {
+    state.initialReadiness = 38;
+    state.readiness = 38;
+    state.activeNodeId = 2;
+    state.nodes = NODES.map(function (n) {
+      return {
+        id: n.id, title: n.title, skippable: n.skippable,
+        status: n.id === 1 ? "done" : n.id === 2 ? "current" : "pending"
+      };
+    });
+    var banner = $("#complete-banner");
+    if (banner) banner.classList.remove("show");
+    renderPathPage();
+  }
+
+  function renderPathPage() {
+    var routeEl = $("#path-route");
+    if (routeEl) routeEl.textContent = getIndustryLabel() + " → " + state.role;
+    updateReadiness();
+    renderNodeList();
+    renderPathDetail();
+    updateNodeProgress();
+  }
+
+  // ==================== 反馈页 ====================
+  function renderSkillRadar() {
+    var container = $("#skill-radar");
+    if (!container) return;
+
+    container.innerHTML = SKILL_RADAR.map(function (skill) {
+      // 根据行业背景微调能力值
+      var adjusted = skill.base + (state.selectedIndustries.length > 0 ? 5 : 0);
+      adjusted = Math.min(100, adjusted);
+      return '<div style="display:flex;align-items:center;gap:12px;">' +
+        '<span style="font-size:22px;">' + skill.icon + '</span>' +
+        '<div style="flex:1;min-width:0;">' +
+        '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">' +
+        '<span style="font-size:13px;font-weight:600;">' + skill.name + '</span>' +
+        '<span style="font-size:12px;color:var(--primary);font-weight:600;">' + adjusted + '%</span>' +
+        '</div>' +
+        '<div class="progress-track" style="height:6px;">' +
+        '<div class="progress-fill" style="width:' + adjusted + '%;background:' + (adjusted > 65 ? 'var(--green)' : 'var(--primary)') + ';"></div>' +
+        '</div></div></div>';
+    }).join("");
+  }
+
+  function renderCompletePage() {
+    var finalPct = Math.max(state.readiness, 60);
+    var delta = finalPct - state.initialReadiness;
+
+    var subEl = $("#complete-sub");
+    if (subEl) subEl.textContent = getIndustryLabel() + " → " + state.role;
+
+    var navText = $("#complete-readiness-nav");
+    var navBar = $("#complete-readiness-nav-bar");
+    if (navText) navText.textContent = finalPct + "%";
+    if (navBar) navBar.style.width = finalPct + "%";
+
+    var fromEl = $("#complete-from");
+    var toEl = $("#complete-to");
+    var deltaEl = $("#complete-delta");
+    var barEl = $("#complete-progress-bar");
+    if (fromEl) fromEl.textContent = state.initialReadiness + "%";
+    if (toEl) toEl.textContent = finalPct + "%";
+    if (deltaEl) deltaEl.textContent = "+" + delta + "%";
+    if (barEl) barEl.style.width = finalPct + "%";
+
+    // 🔧 动态更新描述
+    var descEl = $("#complete-desc");
+    if (descEl) {
+      descEl.innerHTML = '你用了 <strong>3 周</strong> 完成了通常需要 <strong>6 周</strong> 的路径。<br>你的<strong>' + getIndustryLabel() + '</strong>背景在多个节点上直接平移了能力，从而节省了大量学习时间。';
+    }
+
+    renderSkillRadar();
+  }
+
+  // ==================== 加载动画模拟 ====================
+  function runLoadingSimulation() {
+    var steps = $$("#load-steps li");
+    var currentStep = 2; // 前两步已完成
+
+    function advanceStep() {
+      if (currentStep >= steps.length) return;
+
+      // 完成上一步
+      if (currentStep > 0) {
+        steps[currentStep - 1].classList.remove("active");
+        steps[currentStep - 1].classList.add("done");
+      }
+
+      // 激活当前步
+      steps[currentStep].classList.add("active", "show");
+      currentStep++;
+
+      // 继续下一步
+      if (currentStep < steps.length) {
+        setTimeout(advanceStep, 600 + Math.random() * 400);
+      }
+    }
+
+    // 🔧 更真实的加载时序
+    setTimeout(function () {
+      steps[2].classList.remove("active");
+      steps[2].classList.add("done");
+      steps[3].classList.add("active", "show");
+      setTimeout(function () {
+        steps[3].classList.remove("active");
+        steps[3].classList.add("done");
+        steps[4].classList.add("active", "show");
+        setTimeout(function () {
+          steps[4].classList.remove("active");
+          steps[4].classList.add("done");
+          // 生成完成，跳转
+          showPage("path");
+          initPathPage();
+        }, 500);
+      }, 600);
+    }, 800);
+  }
+
+  // ==================== 事件绑定 ====================
+  function bindEvents() {
+    // 🔧 使用事件委托处理 data-page 跳转
+    document.addEventListener("click", function (e) {
+      var btn = e.target.closest("[data-page]");
+      if (!btn) return;
+      var p = btn.dataset.page;
+      if (p === "path") renderPathPage();
+      showPage(p);
+      if (p === "onboarding") showOnboardStep(1);
+    });
+
+    // 预览反馈页
+    var previewBtn = $("#preview-complete");
+    if (previewBtn) previewBtn.addEventListener("click", goToCompletePage);
+
+    var goCompleteBtn = $("#go-complete");
+    if (goCompleteBtn) goCompleteBtn.addEventListener("click", goToCompletePage);
+
+    // Demo 操作按钮
+    document.addEventListener("click", function (e) {
+      var btn = e.target.closest(".demo-action");
+      if (!btn) return;
+      showToast("📌 " + btn.dataset.demo + " 功能（Demo 演示，正式版将接入真实服务）", 3000);
+    });
+
+    // 🔧 Alt+4 快捷键（面试演示用）
+    document.addEventListener("keydown", function (e) {
+      if (e.altKey && e.key === "4") {
+        e.preventDefault();
+        goToCompletePage();
+      }
+    });
+
+    // 修改背景
+    var editBgBtn = $("#btn-edit-bg");
+    if (editBgBtn) editBgBtn.addEventListener("click", function () {
+      showPage("onboarding");
+      showOnboardStep(1);
+    });
+
+    // Onboarding 步骤按钮
+    var toStep2 = $("#to-step2");
+    if (toStep2) toStep2.addEventListener("click", function () {
+      var jobDesc = $("#job-desc");
+      var hasDesc = jobDesc && jobDesc.value.trim().length > 0;
+      if (state.selectedIndustries.length === 0 && !hasDesc) {
+        showToast("请至少选择一个行业，或填写工作职能描述");
+        var grid = $("#industry-tags");
+        if (grid) grid.classList.add("shake");
+        setTimeout(function () { if (grid) grid.classList.remove("shake"); }, 500);
+        return;
+      }
+      showOnboardStep(2);
+    });
+
+    var backStep1 = $("#back-step1");
+    if (backStep1) backStep1.addEventListener("click", function () { showOnboardStep(1); });
+
+    // 角色选择（事件委托）
+    var roleList = $("#role-list");
+    if (roleList) {
+      roleList.addEventListener("click", function (e) {
+        var card = e.target.closest(".role-card");
+        if (!card) return;
+        $$("#role-list .role-card").forEach(function (c) { c.classList.remove("selected"); });
+        card.classList.add("selected");
+        var radio = card.querySelector("input");
+        if (radio) radio.checked = true;
+        state.role = card.querySelector("input").value;
+        var routeEl = $("#preview-route");
+        if (routeEl) routeEl.textContent = getIndustryLabel() + " → " + state.role;
+        var subEl = $("#complete-sub");
+        if (subEl) subEl.textContent = getIndustryLabel() + " → " + state.role;
+      });
+    }
+
+    // 生成路径按钮
+    var toStep3 = $("#to-step3");
+    if (toStep3) toStep3.addEventListener("click", function () {
+      var checked = document.querySelector('input[name="role"]:checked');
+      if (checked) {
+        state.role = checked.value;
+        var routeEl = $("#preview-route");
+        if (routeEl) routeEl.textContent = getIndustryLabel() + " → " + state.role;
+        var subEl = $("#complete-sub");
+        if (subEl) subEl.textContent = getIndustryLabel() + " → " + state.role;
+      }
+      showOnboardStep(3);
+    });
+
+    // 🔧 移动端汉堡菜单
+    var mobileMenuBtn = $("#mobile-menu-btn");
+    if (mobileMenuBtn) {
+      mobileMenuBtn.addEventListener("click", function () {
+        var navLinks = $("#nav-links");
+        if (navLinks) {
+          var isVisible = navLinks.style.display === "flex";
+          navLinks.style.display = isVisible ? "none" : "flex";
+          navLinks.style.flexDirection = "column";
+          navLinks.style.position = "absolute";
+          navLinks.style.top = "65px";
+          navLinks.style.left = "0";
+          navLinks.style.right = "0";
+          navLinks.style.background = "#fff";
+          navLinks.style.padding = "16px var(--content-pad)";
+          navLinks.style.borderBottom = "1px solid var(--border)";
+          navLinks.style.boxShadow = "var(--shadow-md)";
+          navLinks.style.zIndex = "99";
+          if (!isVisible) {
+            navLinks.style.display = "flex";
+          } else {
+            navLinks.removeAttribute("style");
+          }
+        }
+      });
+    }
+
+    // 🔧 路径页移动端节点列表切换
+    var pathMenuBtn = $("#mobile-menu-btn-path");
+    if (pathMenuBtn) {
+      pathMenuBtn.addEventListener("click", function () {
+        var sidebar = $("#path-sidebar");
+        if (sidebar) {
+          sidebar.classList.toggle("mobile-open");
+        }
+      });
+    }
+
+    // 🔧 键盘导航：角色卡片支持 Enter/Space
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") {
+        var roleCard = e.target.closest(".role-card");
+        if (roleCard && roleCard.closest("#role-list")) {
+          e.preventDefault();
+          roleCard.click();
+        }
+        var nodeItem = e.target.closest(".node-item");
+        if (nodeItem && nodeItem.closest("#node-list")) {
+          e.preventDefault();
+          nodeItem.click();
+        }
+      }
+    });
+
+    // 🔧 窗口大小变化时处理侧栏
+    window.addEventListener("resize", function () {
+      var sidebar = $("#path-sidebar");
+      if (sidebar && window.innerWidth > 1024) {
+        sidebar.classList.remove("mobile-open");
+      }
+      var navLinks = $("#nav-links");
+      if (navLinks && window.innerWidth > 640) {
+        navLinks.removeAttribute("style");
+      }
+    });
+  }
+
+  // ==================== 初始化 ====================
+  function init() {
+    initIndustryTags();
+    bindEvents();
+    // 当前页面
+    state.page = "landing";
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
